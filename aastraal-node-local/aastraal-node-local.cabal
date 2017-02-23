@@ -4,7 +4,7 @@ synopsis:            TODO Initial project template from stack
 description:         Please see README.md
 homepage:            https://github.com/githubuser/aastraal-node-local
 license:             BSD3
-license-file:        LICENSE
+license-file:        ../LICENSE
 author:              Author name here
 maintainer:          example@example.com
 copyright:           2016 Author name here
@@ -29,10 +29,7 @@ library
                      , uuid
                      , deepseq
                      , lens
-  other-modules:       BasicConcurrentServerB
-                     , ServerOtherVersion
-                     , SimpleTCPServer
-                     , Yaml
+  other-modules:       Yaml
                      , Command
                      , EventSourcing
                      , Projector
