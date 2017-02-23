@@ -1,0 +1,8 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- brick-0.10
+- text-zipper-0.8.1
+resolver: lts-7.1
