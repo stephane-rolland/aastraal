@@ -8,13 +8,14 @@ import qualified Text.Read as TR
 import qualified Data.Maybe as DM
 import Control.Lens
 import AppState
+import qualified Control.Monad as CM
 
 treatEachMsg :: SIO.Handle -> (N.Notification -> IO ()) -> IO ()
 treatEachMsg handle onNotification = do
     IN.receiveOverNetwork (treatMessage onNotification) handle 
 
 data Parsed = Ack A.Ack
-              | Notif N.Notification
+              | Notif N.Notifications
 
 treatMessage :: (N.Notification -> IO ()) -> String -> IO ()
 treatMessage onNotification s = do
@@ -22,18 +23,18 @@ treatMessage onNotification s = do
   case parsed of
     Ack _ -> return ()    -- becareful the ack is not tested, so it's useless for the moment
     Notif _ -> do
-      let notification = read s :: N.Notification
-      onNotification notification
+      let notifications = read s :: N.Notifications
+      CM.forM_ notifications onNotification 
   return ()
 
 parse :: String -> IO (Parsed)
 parse s = do
   let maybeAck = TR.readMaybe s :: Maybe A.Ack
-  let maybeNotification = TR.readMaybe s :: Maybe N.Notification
+  let maybeNotifications = TR.readMaybe s :: Maybe N.Notifications
 
   let value = if (DM.isJust maybeAck)
         then Ack $ DM.fromJust maybeAck
-        else Notif $ DM.fromJust maybeNotification
+        else Notif $ DM.fromJust maybeNotifications
 
   return value
 
@@ -44,4 +45,4 @@ connect = do
 
 updateState :: St -> N.Notification -> St
 updateState st (N.UpdateTasks ts) = set tasks ts st 
-
+updateState st (N.UpdateTimeLogs tls) = set timeLogs tls st

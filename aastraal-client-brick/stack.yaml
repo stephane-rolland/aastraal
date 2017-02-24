@@ -4,5 +4,7 @@ packages:
 - '.'
 extra-deps:
 - brick-0.10
+- suspend-0.2.0.0
 - text-zipper-0.8.1
+- timers-0.2.0.3
 resolver: lts-7.1

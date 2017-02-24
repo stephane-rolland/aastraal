@@ -3,9 +3,11 @@ module EventSourcing where
 import qualified FileDataBase as FDB 
 
 import Task
+import TimeLog
 
 data Event =
   Refresh
+  | TimeLogged TimeLogs
   | TaskCreated TaskName TaskUuid TaskUuid -- last one is parents uuid
   | TaskSetDescription TaskUuid TaskDescription
   | TaskSetWhy TaskUuid TaskWhy

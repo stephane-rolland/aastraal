@@ -32,6 +32,9 @@ library
                     ,  text-zipper
                     ,  random
                     ,  uuid
+                    , time
+                    , timers >= 0.2.0.3
+                    , suspend
   other-modules:       AppState
                     ,  KeyHandler
                     , CustomEvent
@@ -40,6 +43,7 @@ library
                     , Notification
                     , NotificationHandler
                     , Ack
+                    , TimeLog
 
 executable aastraal-client-brick
   default-language:    Haskell2010

@@ -29,6 +29,8 @@ library
                      , uuid
                      , deepseq
                      , lens
+                     , time
+                     , type-operators
   other-modules:       Yaml
                      , Command
                      , EventSourcing
@@ -37,6 +39,7 @@ library
                      , Task
                      , Notification
                      , Ack
+                     , TimeLog
 
 executable aastraal-node-local
   default-language:    Haskell2010

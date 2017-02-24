@@ -7,6 +7,7 @@ import Data.Maybe
 import qualified Data.List as DL
 
 import Task
+import TimeLog
 
 type Parser = [String] -> IO (Either String Command)  
 
@@ -19,6 +20,9 @@ mkTaskCreate n = do
 
 data Command =   AppRefresh
                | AppShowDetails Bool
+               | TimeLogStart String
+               | TimeLogStop
+               | TimeLogComment String
                | TaskCreate TaskName TaskUuid TaskUuid   -- the last one it hte parent uuid
                | TaskSelect TaskName
                | TaskSetDescription TaskUuid TaskDescription
@@ -30,6 +34,7 @@ data Command =   AppRefresh
                | TaskSetEstimate TaskUuid TaskEstimate
                | TaskSetPerturbation TaskUuid TaskPerturbation
                | TaskSetParent TaskUuid TaskName TaskName  -- currentUuid parentName childName
+               | TimeLogged TimeLogs 
              deriving (Show, Read)
 
 parse :: String -> IO (Either String Command)
@@ -42,6 +47,16 @@ parseElems ("hide" : _) = return $ Right $ AppShowDetails False
 
 parseElems ("refresh" : _) = return $ Right AppRefresh
 parseElems ("app-refresh" : _) = return $ Right AppRefresh
+
+parseElems ("timelog-start" : args) = parseTimeLogStart args
+parseElems ("ss" : args) = parseTimeLogStart args
+
+parseElems ("timelog-stop" : _) = return $ Right TimeLogStop
+parseElems ("st" : _) = return $ Right TimeLogStop
+
+parseElems ("timelog-comment" : args) = parseTimeLogComment args
+parseElems ("cmt" : args) = parseTimeLogComment args
+
 
 parseElems ("task-create" : args) = parseTaskCreate args
 parseElems ("touch" : args) = parseTaskCreate args
@@ -97,6 +112,15 @@ parseAppShowDetails :: Parser
 parseAppShowDetails (arg:_) = return $ Right $ AppShowDetails (read arg :: Bool) 
 parseAppShowDetails as = parseError $ "in task-create: " ++ DL.intercalate " " as
 
+parseTimeLogStart :: Parser
+parseTimeLogStart as@(_:_) = return $ Right $ TimeLogStart $ DL.intercalate " " as
+parseTimeLogStart _ = return $ Right $ TimeLogStart ""
+
+parseTimeLogComment :: Parser
+parseTimeLogComment as@(_:_) = return $ Right $ TimeLogComment $ DL.intercalate " " as
+parseTimeLogComment as = parseError $ "in timelog-comment " ++ DL.intercalate " " as
+
+
 parseTaskCreate :: Parser
 parseTaskCreate as@(_:_)      = Right <$> mkTaskCreate (DL.intercalate " " as) 
 parseTaskCreate as            = parseError $ "in task-create: " ++ DL.intercalate " " as
@@ -143,7 +167,6 @@ parseTaskSetParent as = parseError $ "in task-set-perturbation" ++ DL.intercalat
 
 parseParentArgs :: Parser
 parseParentArgs as = do
-  putStrLn $ "motherCleared = " ++ motherCleared ++ "child = " ++ child
   return $ Right $ TaskSetParent "" motherCleared child
   where
     mother  = DL.intercalate " " $ DL.dropWhile (not.predicate) as

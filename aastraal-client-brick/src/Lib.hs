@@ -38,10 +38,14 @@ import qualified Notification as N
 import qualified NotificationHandler as NH
 
 import Task 
+import TimeLog
 import qualified System.IO as SIO
 import qualified Data.Maybe as DM
 import qualified Data.List as DL
 import qualified Data.Ord as O
+import qualified Data.Time.Clock as DTC
+import qualified Control.Concurrent.Timer as CCT
+import qualified Control.Concurrent.Suspend.Lifted as CCSL
 
 type CursorLocationName = BrickTypes.CursorLocation Name
 
@@ -70,9 +74,14 @@ appEvent st (VtyEvent ev) = do
   return (nextEvent)
 appEvent st OnNewCliCommand = do
   handleOnNewCliCommand st
+  
 appEvent st (OnNotification n) = do
   let st' = NH.updateState st n
   BrickMain.continue st'
+appEvent st (OnTimeLogClock datetime) = do
+  let st' = handleTimeLogClock st datetime
+  BrickMain.continue st'
+
 
 theMap :: BrickAttrMap.AttrMap
 theMap = BrickAttrMap.attrMap GraphicsVty.defAttr
@@ -98,6 +107,7 @@ main = do
   
   chan <- ControlConcurrent.newChan
 
+  launchTimer chan
   threadHandleNotifications (DM.fromJust handle) chan
   threadHandleNewCliCommands chan
  
@@ -113,7 +123,7 @@ threadHandleNewCliCommands :: ControlConcurrent.Chan CustomEvent -> IO ()
 threadHandleNewCliCommands chan = do
   _ <- ControlConcurrent.forkIO $ ControlMonad.forever $ do
     ControlConcurrent.writeChan chan OnNewCliCommand
-    ControlConcurrent.threadDelay 500000
+    ControlConcurrent.threadDelay 200000
   return ()
 
 threadHandleNotifications :: SIO.Handle -> ControlConcurrent.Chan CustomEvent -> IO ()
@@ -126,6 +136,17 @@ onNotification :: ControlConcurrent.Chan CustomEvent -> N.Notification -> IO ()
 onNotification chan n = do
   ControlConcurrent.writeChan chan (OnNotification n)
   return ()
+
+launchTimer :: ControlConcurrent.Chan CustomEvent -> IO ()
+launchTimer chan = do
+  let delay = CCSL.mDelay 1
+  _ <- CCT.repeatedTimer (onTimeLogClockComputation chan) delay
+  return ()
+
+onTimeLogClockComputation :: ControlConcurrent.Chan CustomEvent -> IO ()
+onTimeLogClockComputation chan = do
+  currentTime <- DTC.getCurrentTime
+  ControlConcurrent.writeChan chan (OnTimeLogClock currentTime)
 
         
 getTasksText :: St -> String
@@ -157,8 +178,9 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
   else "do not display" ++ n 
 
   where
-    textToDisplay = padding ++ dashField ++ n ++ descriptionField ++ whyField ++ newline ++ details
+    textToDisplay = padding ++ dashField ++ n ++ timelogged ++ descriptionField ++ whyField ++ newline ++ details
 
+    timelogged = " {" ++ (show $ getTimeLogged st t) ++ ":00} "
     depth = getDepth st t 
     padding = concat $ replicate depth "           "
     newline = "\n"
@@ -208,17 +230,8 @@ getDepth st t = getDepthRecursive ts t selectedUuid
 
 getDepthRecursive :: Tasks -> Task -> TaskUuid -> Int
 getDepthRecursive _ts task selectedU | (view uuid task) == selectedU = 0
-getDepthRecursive _ts task selectedU | (view parent task) == "" = 0
+getDepthRecursive _ts task _selectedU | (view parent task) == "" = 0
 getDepthRecursive _ _ _ = 1
---getDepthRecursive ts task selectedU = parentDepth 
---  where
---    u = view uuid task
---    maybeTask = DL.find (predicate u) ts
---    predicate :: TaskUuid -> Task -> Bool
---    predicate u' t = u' == (view uuid t)
---    parentDepth = case maybeTask of
---                   Just t -> 1 + getDepthRecursive ts (view parent t) selectedU
---                   _ -> error "this case should be managed by the clase getDepthRecursive ts "
 
 isCurrentTaskOrDirectChild :: St -> Task -> Bool
 isCurrentTaskOrDirectChild st t = isCurrentTask || isChildTask
@@ -228,14 +241,48 @@ isCurrentTaskOrDirectChild st t = isCurrentTask || isChildTask
     isChildTask = uuidParent == (view parent t)
 
 
+handleTimeLogClock :: St -> DTC.UTCTime -> St
+handleTimeLogClock st dt = st''
+  where
+    tls = view timeLogsToSend st
+    txt = view timeLogComment st
+    currentTaskLogged = view uuidCurrentTaskLogged st
+
+    newTimeLog = case currentTaskLogged of
+                   Just u -> Just $ TimeLog u dt txt
+                   _ -> Nothing 
+
+    tls' = case newTimeLog of
+             Just tl -> tl : tls
+             _ -> tls
+    
+    st' = set timeLogsToSend tls' st
+    st'' = set timeLogComment "" st'
+  
+getTimeLogged :: St -> Task -> Int
+getTimeLogged st t = selfTimeLogged + childTimeLogged
+  where
+    selfTimeLogged = length $ getTimeLogs st t
+    childTimeLogged = sum $ map (getTimeLogged st) cs
+    cs = getChildren st t
 
 
+getChildren :: St -> Task -> Tasks
+getChildren st t = cs
+  where
+    ts = view tasks st
+    cs = filter (predicate t) ts
+    predicate :: Task -> Task -> Bool
+    predicate task t' = (view uuid task) == (view parent t')
 
 
-
-
-
-
+getTimeLogs :: St -> Task -> TimeLogs
+getTimeLogs st t = tls'
+  where
+    tls = view timeLogs st
+    tls' = filter (predicate t) tls
+    predicate :: Task -> TimeLog -> Bool
+    predicate task tl = (view uuid task) == (view relatedTaskUuid tl)
 
 
 

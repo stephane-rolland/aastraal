@@ -19,6 +19,7 @@ processEvent event notifier = do
 
 process :: Command -> SubscriberNotification -> IO ()
 process AppRefresh notifier = processEvent ES.Refresh notifier
+process (TimeLogged tls) notifier = processEvent (ES.TimeLogged tls) notifier
 process (TaskCreate taskName taskUuid taskUuidParent) notifier = do
   let event = ES.TaskCreated taskName taskUuid taskUuidParent
   processEvent event notifier

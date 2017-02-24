@@ -20,8 +20,9 @@ import IoNetwork
 
 import qualified Data.Maybe as DM 
 import qualified System.IO as SIO
-import Task 
 
+import Task 
+import TimeLog
 
 type Key = GraphicsVty.Key
 type EventMName = BrickTypes.EventM Name
@@ -69,21 +70,39 @@ eraseCommandLine st = st'
 eraseCommandLine' :: St -> St
 eraseCommandLine' st = st & cliEditor .~ (resetEdit st)
 
+
+handleUserActivity :: St -> IO (St) 
+handleUserActivity st = do
+  newState <- if not hasTimeLogs
+              then return st
+              else do
+                  IOClass.liftIO $ sendTimeLogs handle tls 
+                  return $ set timeLogsToSend [] st 
+  return newState
+
+  where
+    tls = view timeLogsToSend st
+    hasTimeLogs = not.null $ tls  
+    handle = DM.fromJust $ view socketHandle st 
+
+
 handleOnNewCliCommand :: St -> EventMName (BrickTypes.Next St)
 handleOnNewCliCommand st = do
-  let handle = DM.fromJust $ st ^. socketHandle
   newState <- if not hasCommands
         then return st
         else do
             st' <- IOClass.liftIO $ parseAndEvaluateCommand handle c st
             let st'' = set commands (drop 1 cs) st'
-            return st''
+            st''' <- IOClass.liftIO $  handleUserActivity st''    -- what to do when there is user activity ( send time logs for example)
+            return st'''
+
   BrickMain.continue newState
   where
     hasCommands = not . null $ st ^. commands 
     cmds    = st ^. commands
     (c:cs) = cmds
-
+    handle = DM.fromJust $ st ^. socketHandle
+  
 parseAndEvaluateCommand :: SIO.Handle -> String -> St -> IO (St)
 parseAndEvaluateCommand handle cmd st = do
   commandToSend <- parse cmd
@@ -101,6 +120,18 @@ evaluateCommand :: Command -> SIO.Handle -> St -> IO (St)
 evaluateCommand (AppShowDetails b) _ st = do
   let st' = set isShowDetails b st
   return st'
+evaluateCommand (TimeLogStart cmt) _ st = do
+  let uuidSelected = view uuidCurrentTask st
+  let st' = set uuidCurrentTaskLogged (Just uuidSelected) st
+  let st''= set timeLogComment cmt st'
+  return st''
+evaluateCommand (TimeLogStop) _ st = do
+  let st' = set uuidCurrentTaskLogged Nothing st
+  return st'
+evaluateCommand (TimeLogComment cmt) _ st = do
+  let st' = set timeLogComment cmt st
+  return st'
+  
 evaluateCommand (TaskSelect taskName) _ st = do
   let uuidSelected = getUuidSelected taskName $ view tasks st
   let st' = set uuidCurrentTask uuidSelected st
@@ -159,6 +190,13 @@ getUuidSelected n ts = uuidFound
         taskName = view name t
         lengthInput = length nm
         startTaskName = take lengthInput taskName
+
+
+sendTimeLogs :: SIO.Handle -> TimeLogs -> IO ()
+sendTimeLogs h tls = sendOverNetwork h (TimeLogged tls)
+  
+
+
 
 -- eraseCommandLine :: St -> EventMName (BrickTypes.Next St)
 -- eraseCommandLine st = do
