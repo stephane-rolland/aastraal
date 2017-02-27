@@ -108,14 +108,15 @@ handleOnNewCliCommand st = do
 parseAndEvaluateCommand :: SIO.Handle -> String -> St -> IO (St)
 parseAndEvaluateCommand handle cmd st = do
   commandToSend <- parse cmd
-  st' <- case commandToSend of
+  st''' <- case commandToSend of
     Right c -> do
       st' <- evaluateCommand c handle st
-      return st'
+      let st'' = set lastError "" st' 
+      return st''
     Left msg -> do
-      putStrLn msg
-      return st
-  return st'
+      let st' = set lastError msg st
+      return st'
+  return st'''
 
 
 evaluateCommand :: Command -> SIO.Handle -> St -> IO (St)

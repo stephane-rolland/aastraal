@@ -24,9 +24,14 @@ import Brick.Widgets.Core
  , vLimit
  , str
  , padTop
+ , withAttr
  )
 
-import Brick.Util (on)
+import Brick.Markup
+import Data.Text.Markup  -- for @@ using color
+import Data.Text (pack)
+
+import Brick.Util (on,fg)
 import Control.Lens
 import KeyHandler
 
@@ -53,11 +58,12 @@ drawUI :: St -> [BrickTypes.Widget Name]
 drawUI st = [cli]
     where
         tasksTxt = str $ getTasksText st
-        e1 = BrickWidgetsEdit.renderEditor False (st ^. cliEditor)
+        e1 =  BrickWidgetsEdit.renderEditor False (st ^. cliEditor)
         --ui = BrickWidgetsCenter.center $ (str "Log Task: " <+> (hLimit 30 $ vLimit 5 $ e1 )) <=>
         --                str " " <=>
         --                str "this task will be logged every minute"
-        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1))
+        errorTxt = markup ((pack $ view lastError st) @@ fg GraphicsVty.red)
+        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1)) <=> errorTxt
 
 appCursor :: St -> [CursorLocationName] -> Maybe CursorLocationName
 appCursor st names = locationName

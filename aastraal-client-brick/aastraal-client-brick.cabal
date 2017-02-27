@@ -35,6 +35,7 @@ library
                     , time
                     , timers >= 0.2.0.3
                     , suspend
+                    , text
   other-modules:       AppState
                     ,  KeyHandler
                     , CustomEvent

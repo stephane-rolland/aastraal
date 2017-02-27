@@ -39,6 +39,8 @@ noTimeLogs :: [a]
 noTimeLogs = []
 noTimeLogComment :: String
 noTimeLogComment = ""
+noError :: String
+noError = ""
 
 initialState :: St
 initialState =
@@ -53,6 +55,7 @@ initialState =
        noTimeLogs   -- no time logs to send
        noTimeLogComment
        noTimeLogs  -- no time logs about tasks
+       noError
        
 data St =
     St { _currentEditor :: Name
@@ -66,6 +69,7 @@ data St =
        , _timeLogsToSend :: TL.TimeLogs
        , _timeLogComment :: String
        , _timeLogs :: TL.TimeLogs
+       , _lastError :: String
        }
 
 makeLenses ''St
