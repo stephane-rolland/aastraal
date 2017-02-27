@@ -20,6 +20,8 @@ import IoNetwork
 
 import qualified Data.Maybe as DM 
 import qualified System.IO as SIO
+import qualified Data.List as DL
+
 
 import Task 
 import TimeLog
@@ -130,6 +132,15 @@ evaluateCommand (TimeLogStop) _ st = do
   return st'
 evaluateCommand (TimeLogComment cmt) _ st = do
   let st' = set timeLogComment cmt st
+  return st'
+evaluateCommand (TaskSelectParent) _ st = do
+  let u = view uuidCurrentTask st
+  let ts = view tasks st
+  let maybeTask = DL.find (\t -> (view uuid t) == u) ts
+  let uParent = case maybeTask of
+                  Just t -> view parent t
+                  _ -> ""
+  let st' = set uuidCurrentTask uParent st
   return st'
   
 evaluateCommand (TaskSelect taskName) _ st = do

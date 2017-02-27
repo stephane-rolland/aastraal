@@ -24,6 +24,7 @@ data Command =   AppRefresh
                | TimeLogStop
                | TimeLogComment String
                | TaskCreate TaskName TaskUuid TaskUuid   -- the last one it hte parent uuid
+               | TaskSelectParent 
                | TaskSelect TaskName
                | TaskSetDescription TaskUuid TaskDescription
                | TaskSetWhy TaskUuid TaskWhy
@@ -60,6 +61,9 @@ parseElems ("cmt" : args) = parseTimeLogComment args
 
 parseElems ("task-create" : args) = parseTaskCreate args
 parseElems ("touch" : args) = parseTaskCreate args
+
+parseElems ("task-select-parent" : _) = parseTaskSelectParent []
+parseElems ("cd" : ".." : _) = parseTaskSelectParent []
 
 parseElems ("task-select" : args) = parseTaskSelect args
 parseElems ("cd" : args) = parseTaskSelect args
@@ -124,6 +128,9 @@ parseTimeLogComment as = parseError $ "in timelog-comment " ++ DL.intercalate " 
 parseTaskCreate :: Parser
 parseTaskCreate as@(_:_)      = Right <$> mkTaskCreate (DL.intercalate " " as) 
 parseTaskCreate as            = parseError $ "in task-create: " ++ DL.intercalate " " as
+
+parseTaskSelectParent :: Parser
+parseTaskSelectParent _ = return $ Right $ TaskSelectParent
 
 parseTaskSelect :: Parser
 parseTaskSelect as@(_:_) = return $ Right $ TaskSelect $ DL.intercalate " " as
