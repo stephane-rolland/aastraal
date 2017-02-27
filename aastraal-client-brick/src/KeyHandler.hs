@@ -110,86 +110,87 @@ parseAndEvaluateCommand handle cmd st = do
   commandToSend <- parse cmd
   st''' <- case commandToSend of
     Right c -> do
-      st' <- evaluateCommand c handle st
-      let st'' = set lastError "" st' 
+      eitherSt <- evaluateCommand c handle st
+      let st'' = case eitherSt of
+                   Right stt -> set lastError "" stt
+                   Left msg -> set lastError msg st 
       return st''
     Left msg -> do
       let st' = set lastError msg st
       return st'
   return st'''
 
-
-evaluateCommand :: Command -> SIO.Handle -> St -> IO (St)
+evaluateCommand :: Command -> SIO.Handle -> St -> IO (Either String St)
 evaluateCommand (AppShowDetails b) _ st = do
   let st' = set isShowDetails b st
-  return st'
+  return $ Right st'
 evaluateCommand (TimeLogStart cmt) _ st = do
   let uuidSelected = view uuidCurrentTask st
   let st' = set uuidCurrentTaskLogged (Just uuidSelected) st
   let st''= set timeLogComment cmt st'
-  return st''
+  return $ Right st''
 evaluateCommand (TimeLogStop) _ st = do
   let st' = set uuidCurrentTaskLogged Nothing st
-  return st'
+  return $ Right st'
 evaluateCommand (TimeLogComment cmt) _ st = do
   let st' = set timeLogComment cmt st
-  return st'
+  return $ Right st'
 evaluateCommand (TaskSelectParent) _ st = do
   let u = view uuidCurrentTask st
   let ts = view tasks st
   let maybeTask = DL.find (\t -> (view uuid t) == u) ts
-  let st' = case maybeTask of
-                  Just t -> set uuidCurrentTask (view parent t) st
-                  _ -> set lastError "Root task has no parent, unable to cd .." st
-  return st'
+  let eitherSt = case maybeTask of
+                  Just t -> Right $ set uuidCurrentTask (view parent t) st
+                  _ -> Left "Root task has no parent, unable to cd .."
+  return eitherSt
   
 evaluateCommand (TaskSelect taskName) _ st = do
   let uuidSelected = getUuidSelected taskName $ view tasks st
   let st' = set uuidCurrentTask uuidSelected st
-  return st'
+  return $ Right st'
 evaluateCommand (TaskCreate n u _up) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskCreate n u u') 
-  return st
+  return $ Right st
 evaluateCommand (TaskSetDescription _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetDescription u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetWhy _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetWhy u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetStatus _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetStatus u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetAssurance _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetAssurance u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetCynefin _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetCynefin u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetValue _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetValue u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetEstimate _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetEstimate u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetPerturbation _ d) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetPerturbation u' d)
-  return st
+  return $ Right st
 evaluateCommand (TaskSetParent _ pn cn) h st = do
   let u' = view uuidCurrentTask st
   sendOverNetwork h (TaskSetParent u' pn cn)
-  return st
+  return $ Right st
 evaluateCommand c h st = do
   sendOverNetwork h c
-  return st
+  return $ Right st
 
 getUuidSelected :: TaskName -> Tasks -> TaskUuid
 getUuidSelected n ts = uuidFound
