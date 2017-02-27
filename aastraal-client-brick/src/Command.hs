@@ -126,7 +126,7 @@ parseTaskCreate as@(_:_)      = Right <$> mkTaskCreate (DL.intercalate " " as)
 parseTaskCreate as            = parseError $ "in task-create: " ++ DL.intercalate " " as
 
 parseTaskSelect :: Parser
-parseTaskSelect (arg:_) = return $ Right $ TaskSelect arg
+parseTaskSelect as@(_:_) = return $ Right $ TaskSelect $ DL.intercalate " " as
 parseTaskSelect as            = parseError $ "in task-select: " ++ DL.intercalate " " as
 
 parseTaskSetDescription :: Parser
