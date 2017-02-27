@@ -32,6 +32,7 @@ update (ES.Refresh) = do
   return $ N.UpdateTimeLogs tls : N.UpdateTasks ts : []
 update (ES.TimeLogged tls) = do
   tls' <- workWithTimeLogDb $ transformTimeLogs tls
+  putStrLn $ "debugging projector update = " ++ show tls'
   return $ N.UpdateTimeLogs tls' : []
   where
     transformTimeLogs ts' ts = ts' ++ ts
@@ -90,7 +91,7 @@ workWithTimeLogDb :: (TimeLogs -> TimeLogs) -> IO TimeLogs
 workWithTimeLogDb transformTimeLogs = do
   timelogs <- FDB.dbLoad readTimeLog dbTimeLogsFileName
   let timelogs' = transformTimeLogs timelogs
-  FDB.dbSave writeTimeLog timelogs dbTimeLogsFileName
+  FDB.dbSave writeTimeLog timelogs' dbTimeLogsFileName
   return timelogs'
   
 readTask :: String -> Task
