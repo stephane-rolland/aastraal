@@ -24,7 +24,6 @@ import Brick.Widgets.Core
  , vLimit
  , str
  , padTop
- , withAttr
  )
 
 import Brick.Markup

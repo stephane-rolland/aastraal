@@ -138,10 +138,9 @@ evaluateCommand (TaskSelectParent) _ st = do
   let u = view uuidCurrentTask st
   let ts = view tasks st
   let maybeTask = DL.find (\t -> (view uuid t) == u) ts
-  let uParent = case maybeTask of
-                  Just t -> view parent t
-                  _ -> ""
-  let st' = set uuidCurrentTask uParent st
+  let st' = case maybeTask of
+                  Just t -> set uuidCurrentTask (view parent t) st
+                  _ -> set lastError "Root task has no parent, unable to cd .." st
   return st'
   
 evaluateCommand (TaskSelect taskName) _ st = do
