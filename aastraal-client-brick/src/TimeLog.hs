@@ -14,7 +14,7 @@ data TimeLog = TimeLog
     _time :: DTC.UTCTime,
     _comment :: String
   }
-  deriving (Show,Read)
+  deriving (Show,Read,Ord,Eq)
 
 makeLenses ''TimeLog
 

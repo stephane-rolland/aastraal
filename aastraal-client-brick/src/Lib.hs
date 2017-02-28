@@ -204,7 +204,7 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
                   
     descriptionField = if (not.null) d then "    (" ++ d ++ ")" else ""  
     whyField = if (not.null) w then "   why = " ++ w  else "" 
-    details = if not isDetailed then "" else padding ++ furtherDetails ++ newline
+    details = if not isDetailed then "" else padding ++ furtherDetails ++ newline ++ logs
     furtherDetails = "     >>> " ++
       "[efficiency = " ++ (show efficiency) ++
       " assurance = " ++ (show a) ++
@@ -213,6 +213,23 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
       " estimate = " ++ (show e) ++
       " perturbation = " ++ (show perturb) ++ "]"
     efficiency = getRatio a c v e perturb
+    logPadding = "         "
+    logs = concat $ map logDisplay $ consumeLogs $ getTimeLogs st t
+    logDisplay (DisplayLog i cmt) = padding ++ logPadding ++ cmt ++ " {" ++ (show i ++ ":00} ") ++ newline
+
+data DisplayLog = DisplayLog Int String deriving (Ord,Eq)
+type DisplayLogs = [DisplayLog]
+
+consumeLogs :: TimeLogs -> DisplayLogs
+consumeLogs tls = foldr reducer [] $ DL.sort tls
+  where
+    reducer :: TimeLog -> DisplayLogs -> DisplayLogs
+    reducer tl [] = (DisplayLog 1 $ view comment tl) : []
+    reducer tl allDs@((DisplayLog i cmt):ds) = if null cmt then (DisplayLog (i+1) $ cmt') : ds
+                                     else if null cmt' then (DisplayLog (i+1) $ cmt) : ds
+                                          else (DisplayLog 1 cmt') : allDs 
+      where
+        cmt' = view comment tl
 
 defaultEfficiency :: Int
 defaultEfficiency = 333
