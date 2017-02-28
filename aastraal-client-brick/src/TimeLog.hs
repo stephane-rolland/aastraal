@@ -10,7 +10,7 @@ type TimeLogs = [TimeLog]
 
 data TimeLog = TimeLog
   {
-     _relatedTaskUuid :: TaskUuid,
+    _relatedTaskUuid :: TaskUuid,
     _time :: DTC.UTCTime,
     _comment :: String
   }

@@ -62,7 +62,8 @@ drawUI st = [cli]
         --                str " " <=>
         --                str "this task will be logged every minute"
         errorTxt = markup ((pack $ view lastError st) @@ fg GraphicsVty.red)
-        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1)) <=> errorTxt
+        taskTimeLogger = markup ((pack $ getTaskNameTimeLogged st) @@ fg GraphicsVty.green)
+        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1)) <=> (errorTxt <+> taskTimeLogger)
 
 appCursor :: St -> [CursorLocationName] -> Maybe CursorLocationName
 appCursor st names = locationName
@@ -152,7 +153,6 @@ onTimeLogClockComputation :: ControlConcurrent.Chan CustomEvent -> IO ()
 onTimeLogClockComputation chan = do
   currentTime <- DTC.getCurrentTime
   ControlConcurrent.writeChan chan (OnTimeLogClock currentTime)
-
         
 getTasksText :: St -> String
 getTasksText st = concat $ map display sorted
@@ -183,9 +183,10 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
   else "do not display" ++ n 
 
   where
-    textToDisplay = padding ++ dashField ++ n ++ timelogged ++ descriptionField ++ whyField ++ newline ++ details
+    textToDisplay = padding ++ dashField ++ n ++ timelogged ++ efficiencyTop ++ descriptionField ++ whyField ++ newline ++ details
 
     timelogged = " {" ++ (show $ getTimeLogged st t) ++ ":00} "
+    efficiencyTop = if efficiency /= defaultEfficiency then " <" ++ (show efficiency) ++ "> " else ""
     depth = getDepth st t 
     padding = concat $ replicate depth "           "
     newline = "\n"
@@ -205,12 +206,16 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
     whyField = if (not.null) w then "   why = " ++ w  else "" 
     details = if not isDetailed then "" else padding ++ furtherDetails ++ newline
     furtherDetails = "     >>> " ++
-      "[efficiency = " ++ (show $ getRatio a c v e perturb) ++
+      "[efficiency = " ++ (show efficiency) ++
       " assurance = " ++ (show a) ++
       " cynefin = " ++ (show c) ++
       " value = " ++ (show v) ++
       " estimate = " ++ (show e) ++
-      " perturbation = " ++ (show perturb) ++ "]" 
+      " perturbation = " ++ (show perturb) ++ "]"
+    efficiency = getRatio a c v e perturb
+
+defaultEfficiency :: Int
+defaultEfficiency = 333
 
 getRatio :: TaskAssurance -> TaskCynefin -> TaskValue -> TaskEstimate -> TaskPerturbation -> Int
 getRatio a c v e p = numerator `quot` denominator
@@ -225,7 +230,6 @@ getComplexity Chaos = 5
 getComplexity Complex = 3
 getComplexity Complicated = 2
 getComplexity Obvious = 1
-
 
 getDepth :: St -> Task -> Int
 getDepth st t = getDepthRecursive ts t selectedUuid
@@ -244,7 +248,6 @@ isCurrentTaskOrDirectChild st t = isCurrentTask || isChildTask
     uuidParent = view uuidCurrentTask st
     isCurrentTask = uuidParent == (view uuid t)
     isChildTask = uuidParent == (view parent t)
-
 
 handleTimeLogClock :: St -> DTC.UTCTime -> St
 handleTimeLogClock st dt = st''
@@ -271,7 +274,6 @@ getTimeLogged st t = selfTimeLogged + childTimeLogged
     childTimeLogged = sum $ map (getTimeLogged st) cs
     cs = getChildren st t
 
-
 getChildren :: St -> Task -> Tasks
 getChildren st t = cs
   where
@@ -279,7 +281,6 @@ getChildren st t = cs
     cs = filter (predicate t) ts
     predicate :: Task -> Task -> Bool
     predicate task t' = (view uuid task) == (view parent t')
-
 
 getTimeLogs :: St -> Task -> TimeLogs
 getTimeLogs st t = tls'
@@ -289,8 +290,20 @@ getTimeLogs st t = tls'
     predicate :: Task -> TimeLog -> Bool
     predicate task tl = (view uuid task) == (view relatedTaskUuid tl)
 
-
-
+getTaskNameTimeLogged :: St -> String
+getTaskNameTimeLogged st = case u of
+                             Just "" -> ""
+                             Just _ -> (show timeAccumulated) ++ ":OO to log in: " ++ view name tsk
+                             _ -> ""
+  where
+    u = view uuidCurrentTaskLogged st
+    ts = view tasks st
+    selected = filter (\t -> view uuid t == DM.fromJust u) ts
+    tsk = head $ selected
+    timeAccumulated = length $ filter (\t -> view relatedTaskUuid t == DM.fromJust u) $ view timeLogsToSend st
+      
+    
+    
 
 
 

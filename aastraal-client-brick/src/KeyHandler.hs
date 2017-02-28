@@ -22,7 +22,6 @@ import qualified Data.Maybe as DM
 import qualified System.IO as SIO
 import qualified Data.List as DL
 
-
 import Task 
 import TimeLog
 
@@ -30,7 +29,6 @@ type Key = GraphicsVty.Key
 type EventMName = BrickTypes.EventM Name
 
 type VtyEvent = GraphicsVty.Event
-
 
 onKeyEvent :: Key -> St -> VtyEvent -> EventMName (BrickTypes.Next St)
 onKeyEvent keycode st ev = do
@@ -72,7 +70,6 @@ eraseCommandLine st = st'
 eraseCommandLine' :: St -> St
 eraseCommandLine' st = st & cliEditor .~ (resetEdit st)
 
-
 handleUserActivity :: St -> IO (St) 
 handleUserActivity st = do
   newState <- if not hasTimeLogs
@@ -86,7 +83,6 @@ handleUserActivity st = do
     tls = view timeLogsToSend st
     hasTimeLogs = not.null $ tls  
     handle = DM.fromJust $ view socketHandle st 
-
 
 handleOnNewCliCommand :: St -> EventMName (BrickTypes.Next St)
 handleOnNewCliCommand st = do
@@ -135,6 +131,10 @@ evaluateCommand (TimeLogStop) _ st = do
 evaluateCommand (TimeLogComment cmt) _ st = do
   let st' = set timeLogComment cmt st
   return $ Right st'
+evaluateCommand (TimeLogCancel) _ st = do
+  let st' = set timeLogsToSend [] st
+  let st'' = set uuidCurrentTaskLogged Nothing st'
+  return $ Right st''
 evaluateCommand (TaskSelectParent) _ st = do
   let u = view uuidCurrentTask st
   let ts = view tasks st
@@ -143,7 +143,6 @@ evaluateCommand (TaskSelectParent) _ st = do
                   Just t -> Right $ set uuidCurrentTask (view parent t) st
                   _ -> Left "Root task has no parent, unable to cd .."
   return eitherSt
-  
 evaluateCommand (TaskSelect taskName) _ st = do
   let uuidSelected = getUuidSelected taskName $ view tasks st
   let st' = set uuidCurrentTask uuidSelected st
@@ -203,13 +202,9 @@ getUuidSelected n ts = uuidFound
         lengthInput = length nm
         startTaskName = take lengthInput taskName
 
-
 sendTimeLogs :: SIO.Handle -> TimeLogs -> IO ()
 sendTimeLogs h tls = sendOverNetwork h (TimeLogged tls)
   
-
-
-
 -- eraseCommandLine :: St -> EventMName (BrickTypes.Next St)
 -- eraseCommandLine st = do
 --  let e = resetEdit st
