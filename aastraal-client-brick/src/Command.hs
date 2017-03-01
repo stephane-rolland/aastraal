@@ -188,10 +188,12 @@ parseParentArgs as = do
   where
     mother  = DL.intercalate " " $ DL.dropWhile (not.predicate) as
     motherCleared = case mother of
+                      ('.' : '.' : _) -> ".."
                       ('.' : '/' : path) -> path
                       entire -> entire
     child = DL.intercalate " " $ DL.takeWhile (not.predicate) as
     predicate :: String -> Bool
+    predicate ('.' : '.' : _) = True
     predicate ('.' : '/' : _) = True
     predicate _ = False
     

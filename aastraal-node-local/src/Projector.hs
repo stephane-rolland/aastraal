@@ -106,19 +106,30 @@ readTimeLog s = read s :: TimeLog
 writeTimeLog :: TimeLog -> String
 writeTimeLog tl = show tl
 
-
 fetchByUuid :: TaskUuid -> IO $ Maybe Task
 fetchByUuid taskUuid = do
   tasks <- FDB.dbLoad readTask dbTasksFileName
   let maybeTask = DL.find (predicateUuid taskUuid) tasks
   return maybeTask
 
-fetchByNameAndParentUuid :: TaskName -> TaskUuid -> IO (Maybe Task)
+fetchByNameAndParentUuid :: TaskName -> TaskUuid -> IO $ Maybe Task
 fetchByNameAndParentUuid n pu = do
   tasks <- FDB.dbLoad readTask dbTasksFileName
   let maybeTask = DL.find (predicateNameAndParentUuid n pu) tasks
   return maybeTask
- 
+
+fetchParentByUuid :: TaskUuid -> IO $ Maybe Task
+fetchParentByUuid u = do
+  task <- fetchByUuid u
+  putStrLn $ "task debug" ++ (show task)
+  let maybeParentUuid = case task of
+                         Just t -> Just $ view parent t 
+                         _ -> Nothing
+  putStrLn $ "maybe parent debug" ++ (show $ maybeParentUuid)
+  if DM.isNothing maybeParentUuid then return Nothing
+  else fetchByUuid $ DM.fromJust maybeParentUuid 
+
+  
 predicateUuid :: TaskUuid -> Task -> Bool 
 predicateUuid tuuid task = tuuid == view uuid task
 

@@ -39,6 +39,7 @@ fetchTask :: TaskUuid -> IO (Maybe Task)
 fetchTask taskUuid = P.fetchByUuid taskUuid
 
 fetchChildTask :: TaskUuid -> TaskName -> IO (Maybe Task)
+fetchChildTask u ".." = P.fetchParentByUuid u
 fetchChildTask pu cn = P.fetchByNameAndParentUuid cn pu
 
 processTaskUuid :: TaskUuid -> SubscriberNotification -> (TaskUuid -> ES.Event) -> IO () 
@@ -55,9 +56,10 @@ processSetParent :: TaskUuid -> TaskName -> TaskName -> SubscriberNotification -
 processSetParent u pn cn notifier = do
   maybeTaskParent <- fetchChildTask u pn
   maybeTaskChild <- fetchChildTask u cn
-  putStrLn $ "parent: " ++ (show maybeTaskParent) ++ "child: " ++ (show maybeTaskChild)
+--  putStrLn $ "parent: " ++ (show maybeTaskParent) ++ "child: " ++ (show maybeTaskChild)
   let maybeEvent = case (maybeTaskParent,maybeTaskChild) of
                      (Just pt, Just ct) -> Just $ ES.TaskSetParent (view uuid pt) (view uuid ct)
+                     (Nothing, Just ct) -> Just $ ES.TaskSetParent "" (view uuid ct)
                      _ -> Nothing
   case maybeEvent of
     Just e -> processEvent e notifier
