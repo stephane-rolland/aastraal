@@ -310,16 +310,30 @@ getTimeLogs st t = tls'
 getTaskNameTimeLogged :: St -> String
 getTaskNameTimeLogged st = case u of
                              Just "" -> ""
-                             Just _ -> (show timeAccumulated) ++ ":OO to log in: " ++ view name tsk
+                             Just _ -> textTaskLogged
                              _ -> ""
   where
     u = view uuidCurrentTaskLogged st
     ts = view tasks st
     selected = filter (\t -> view uuid t == DM.fromJust u) ts
     tsk = head $ selected
-    timeAccumulated = length $ filter (\t -> view relatedTaskUuid t == DM.fromJust u) $ view timeLogsToSend st
-      
-    
+    timeAccumulated =
+      length $ filter (\t -> view relatedTaskUuid t == DM.fromJust u) $ view timeLogsToSend st
+    textTaskLogged =
+      (show timeAccumulated) ++ ":OO to log in: " ++ view name tsk ++ lastCommentDisplay
+
+    toSend = view timeLogsToSend st
+    sent = view timeLogs st
+    allTimeLogs = reverse $ DL.sort $ toSend ++ sent
+    maybeLastComment = DL.find (\tl -> predicate tl) $ allTimeLogs
+    lastComment = if not.null $ view timeLogComment st then view timeLogComment st
+                  else case maybeLastComment of
+                         Just tl -> view comment tl
+                         _ -> "nothing in comments"
+    lastCommentDisplay = " (last comment = " ++ lastComment ++ ")"
+
+    predicate :: TimeLog -> Bool
+    predicate tl = (DM.fromJust u == (view relatedTaskUuid tl)) && (not.null $ view comment tl)
     
 
 
