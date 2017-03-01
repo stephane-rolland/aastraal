@@ -63,7 +63,7 @@ drawUI st = [cli]
         --                str "this task will be logged every minute"
         errorTxt = markup ((pack $ view lastError st) @@ fg GraphicsVty.red)
         taskTimeLogger = markup ((pack $ getTaskNameTimeLogged st) @@ fg GraphicsVty.green)
-        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1)) <=> (errorTxt <+> taskTimeLogger)
+        cli = tasksTxt <=> (padTop BrickTypes.Max $ str "Enter command: " <+> (vLimit 1 $ e1)) <=> (errorTxt <=> taskTimeLogger)
 
 appCursor :: St -> [CursorLocationName] -> Maybe CursorLocationName
 appCursor st names = locationName
@@ -183,7 +183,7 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
   else "do not display" ++ n 
 
   where
-    textToDisplay = padding ++ dashField ++ n ++ timelogged ++ efficiencyTop ++ descriptionField ++ whyField ++ newline ++ details
+    textToDisplay = padding ++ dashField ++ n ++ timelogged ++ efficiencyTop ++ descriptionField ++ whyField ++ newline ++ details ++ logs
 
     timelogged = " {" ++ (show $ getTimeLogged st t) ++ ":00} "
     efficiencyTop = if efficiency /= defaultEfficiency then " <" ++ (show efficiency) ++ "> " else ""
@@ -204,7 +204,9 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
                   
     descriptionField = if (not.null) d then "    (" ++ d ++ ")" else ""  
     whyField = if (not.null) w then "   why = " ++ w  else "" 
-    details = if not isDetailed then "" else padding ++ furtherDetails ++ newline ++ logs
+    details = if not isDetailed then "" else padding ++ furtherDetails ++ newline
+    logs = if not $ view isShowTimeLogs st then "" else logsInfo 
+    
     furtherDetails = "     >>> " ++
       "[efficiency = " ++ (show efficiency) ++
       " assurance = " ++ (show a) ++
@@ -214,7 +216,7 @@ displayTaskAsText st t@(Task n _u d _p w s a c v e perturb) =
       " perturbation = " ++ (show perturb) ++ "]"
     efficiency = getRatio a c v e perturb
     logPadding = "         "
-    logs = concat $ map logDisplay $ consumeLogs $ getTimeLogs st t
+    logsInfo = concat $ map logDisplay $ consumeLogs $ reverse $ getTimeLogs st t
     logDisplay (DisplayLog i cmt) = padding ++ logPadding ++ cmt ++ " {" ++ (show i ++ ":00} ") ++ newline
 
 data DisplayLog = DisplayLog Int String deriving (Ord,Eq)
@@ -320,7 +322,7 @@ getTaskNameTimeLogged st = case u of
     timeAccumulated =
       length $ filter (\t -> view relatedTaskUuid t == DM.fromJust u) $ view timeLogsToSend st
     textTaskLogged =
-      (show timeAccumulated) ++ ":OO to log in: " ++ view name tsk ++ lastCommentDisplay
+      (show timeAccumulated) ++ ":00 to log in: " ++ view name tsk ++ lastCommentDisplay
 
     toSend = view timeLogsToSend st
     sent = view timeLogs st
@@ -330,7 +332,7 @@ getTaskNameTimeLogged st = case u of
                   else case maybeLastComment of
                          Just tl -> view comment tl
                          _ -> "nothing in comments"
-    lastCommentDisplay = " (last comment = " ++ lastComment ++ ")"
+    lastCommentDisplay = " (" ++ lastComment ++ ")"
 
     predicate :: TimeLog -> Bool
     predicate tl = (DM.fromJust u == (view relatedTaskUuid tl)) && (not.null $ view comment tl)

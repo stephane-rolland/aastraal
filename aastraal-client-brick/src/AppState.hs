@@ -33,6 +33,8 @@ noInitialTaskSelected :: String
 noInitialTaskSelected = ""
 initialShowDetails :: Bool 
 initialShowDetails = False
+initialShowTimeLogs :: Bool
+initialShowTimeLogs = False
 noCurrentTaskLogged :: Maybe T.TaskUuid
 noCurrentTaskLogged = Nothing
 noTimeLogs :: [a]
@@ -51,6 +53,7 @@ initialState =
        noInitialTasks
        noInitialTaskSelected
        initialShowDetails
+       initialShowTimeLogs
        noCurrentTaskLogged
        noTimeLogs   -- no time logs to send
        noTimeLogComment
@@ -65,6 +68,7 @@ data St =
        , _tasks :: T.Tasks
        , _uuidCurrentTask :: T.TaskUuid
        , _isShowDetails :: Bool
+       , _isShowTimeLogs :: Bool
        , _uuidCurrentTaskLogged :: Maybe T.TaskUuid
        , _timeLogsToSend :: TL.TimeLogs
        , _timeLogComment :: String

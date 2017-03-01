@@ -24,6 +24,8 @@ data Command =   AppRefresh
                | TimeLogStop
                | TimeLogComment String
                | TimeLogCancel
+               | TimeLogShow
+               | TimeLogHide
                | TaskCreate TaskName TaskUuid TaskUuid   -- the last one it hte parent uuid
                | TaskSelectParent 
                | TaskSelect TaskName
@@ -60,6 +62,12 @@ parseElems ("timelog-comment" : args) = parseTimeLogComment args
 parseElems ("sc" : args) = parseTimeLogComment args
 
 parseElems ("timelog-cancel" : _) = return $ Right TimeLogCancel
+
+parseElems ("timelog-show" : _) = return $ Right TimeLogShow
+parseElems ("stl" : _) = return $ Right TimeLogShow
+
+parseElems ("timelog-hide" : _) = return $ Right TimeLogHide
+parseElems ("htl" : _) = return $ Right TimeLogHide
 
 parseElems ("task-create" : args) = parseTaskCreate args
 parseElems ("touch" : args) = parseTaskCreate args

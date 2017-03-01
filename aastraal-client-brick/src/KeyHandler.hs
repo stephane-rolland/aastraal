@@ -135,6 +135,12 @@ evaluateCommand (TimeLogCancel) _ st = do
   let st' = set timeLogsToSend [] st
   let st'' = set uuidCurrentTaskLogged Nothing st'
   return $ Right st''
+evaluateCommand (TimeLogShow) _ st = do
+  let st' = set isShowTimeLogs True st
+  return $ Right st'
+evaluateCommand (TimeLogHide) _ st = do
+  let st' = set isShowTimeLogs False st
+  return $ Right st'
 evaluateCommand (TaskSelectParent) _ st = do
   let u = view uuidCurrentTask st
   let ts = view tasks st
