@@ -67,8 +67,8 @@ eraseCommandLine st = st'
     e'= resetEdit st
     st' = set cliEditor e' st 
 
-eraseCommandLine' :: St -> St
-eraseCommandLine' st = st & cliEditor .~ (resetEdit st)
+-- eraseCommandLine' :: St -> St
+-- eraseCommandLine' st = st & cliEditor .~ (resetEdit st)
 
 handleUserActivity :: St -> IO (St) 
 handleUserActivity st = do
